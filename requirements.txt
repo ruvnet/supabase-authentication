@@ -6,3 +6,4 @@ fastapi
 python-multipart
 uvicorn
 llama-index
+llama-index-vector-stores-supabase

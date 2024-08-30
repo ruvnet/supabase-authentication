@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+supabase
+llama-index
+llama-index-vector-stores-supabase
