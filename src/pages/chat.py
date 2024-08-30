@@ -21,20 +21,30 @@ if "top_p" not in st.session_state:
 # Set up OpenAI API key
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
+def print_data_contents():
+    data_dir = "./data"
+    st.sidebar.write("Contents of ./data directory:")
+    for filename in os.listdir(data_dir):
+        file_path = os.path.join(data_dir, filename)
+        if os.path.isfile(file_path):
+            with open(file_path, 'r') as file:
+                content = file.read()
+                st.sidebar.text_area(f"Contents of {filename}:", content, height=200)
+
 @st.cache_resource(show_spinner=False)
 def load_data():
-    # Check if index already exists
     if os.path.exists("./index"):
-        # Load the index from disk
         storage_context = StorageContext.from_defaults(persist_dir="./index")
         index = load_index_from_storage(storage_context)
     else:
-        # Create a new index
         reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
         docs = reader.load_data()
+        st.sidebar.write(f"Number of documents loaded: {len(docs)}")
+        if docs:
+            for i, doc in enumerate(docs):
+                st.sidebar.write(f"Document {i+1} content (truncated):\n{doc.text[:200]}...")
         Settings.llm = OpenAI(model=st.session_state.model, temperature=st.session_state.temperature)
         index = VectorStoreIndex.from_documents(docs)
-        # Save the index to disk
         index.storage_context.persist("./index")
     return index
 
@@ -42,8 +52,8 @@ index = load_data()
 
 def update_chat_engine():
     st.session_state.chat_engine = index.as_chat_engine(
-        chat_mode="condense_question", 
-        verbose=True, 
+        chat_mode="condense_question",
+        verbose=True,
         streaming=True,
         llm=OpenAI(model=st.session_state.model, temperature=st.session_state.temperature, top_p=st.session_state.top_p)
     )
@@ -55,9 +65,9 @@ def generate_response(prompt):
     name = st.session_state.user_name
     context = st.session_state.conversation_context
     
-    system_prompt = f"""You are a friendly and helpful AI assistant named AI Assistant. 
-    You have a conversation history and can remember details about the user. 
-    The user's name is {name if name else 'unknown'}. 
+    system_prompt = f"""You are a friendly and helpful AI assistant named AI Assistant.
+    You have a conversation history and can remember details about the user.
+    The user's name is {name if name else 'unknown'}.
     Current context: {context}
     You should use this information to personalize your responses.
     If you don't know something about the user, admit that you don't know rather than making assumptions.
@@ -100,17 +110,29 @@ def generate_response(prompt):
     response_stream = st.session_state.chat_engine.stream_chat(full_prompt)
     return response_stream
 
+def test_data_retrieval():
+    test_query = "What are the main types of machine learning?"
+    st.sidebar.write("Test Query:", test_query)
+    response = generate_response(test_query)
+    if isinstance(response, str):
+        st.sidebar.write("Response:", response)
+    else: # It's a stream
+        full_response = ""
+        for chunk in response.response_gen:
+            full_response += chunk
+        st.sidebar.write("Response:", full_response)
+
 def chat():
     st.title("Memory-Enabled RAG Chatbot")
 
     if "conversation_context" not in st.session_state:
         st.session_state.conversation_context = {}
 
-    # Sidebar for model settings
-    st.sidebar.title("Model Settings")
+    # Sidebar for model settings and data verification
+    st.sidebar.title("Model Settings and Data Verification")
     st.session_state.model = st.sidebar.selectbox(
-        "Select Model", 
-        ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"], 
+        "Select Model",
+        ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
         index=0
     )
     st.session_state.temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
@@ -119,6 +141,11 @@ def chat():
     # Update chat engine when settings change
     if st.sidebar.button("Apply Settings"):
         update_chat_engine()
+
+    # Print data contents and test data retrieval
+    print_data_contents()
+    if st.sidebar.button("Test Data Retrieval"):
+        test_data_retrieval()
 
     if not st.session_state.user_name:
         st.session_state.user_name = st.text_input("What's your name?")
@@ -140,7 +167,7 @@ def chat():
             if isinstance(response, str):
                 st.markdown(response)
                 final_response = response
-            else:  # It's a stream
+            else: # It's a stream
                 response_placeholder = st.empty()
                 full_response = ""
                 for chunk in response.response_gen:
