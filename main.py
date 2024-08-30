@@ -19,7 +19,7 @@ from auth.forms import login_form, registration_form, password_reset_form
 from pages.home import show_home
 from pages.profile import show_profile
 from pages.settings import show_settings
-from pages.chat import show_chat
+from pages.chat import chat  # Changed from show_chat to chat
 from utils.supabase_client import supabase, ensure_profile_exists
 
 # Hide the Streamlit style and About menu
@@ -43,6 +43,11 @@ def check_user_session():
 def main():
     st.title("Supabase Authentication")
     
+    # Handle logout
+    if st.session_state.get('logged_out', False):
+        st.session_state.clear()
+        st.rerun()
+    
     # Check for existing session on app load
     if 'user' not in st.session_state:
         if check_user_session():
@@ -57,36 +62,42 @@ def main():
         ensure_profile_exists(user)
     
     # Check if we're on the confirmation page
-    if "confirmation" in st.query_params:
+    query_params = st.query_params
+    if "confirmation" in query_params:
         handle_confirmation()
     else:
         with st.sidebar:
             if user:
                 # Logged-in user menu
                 st.write(f"Welcome, {user.email}")
-                choice = st.selectbox("Menu", ["Home", "Profile", "Settings", "Chat"])
+                choice = st.selectbox("Menu", ["Home", "Profile", "Settings", "Chat"], key="menu_selectbox")
                 
-                if st.button("Logout"):
+                # Handle logout
+                if st.button("Logout", key="logout_button"):
                     logout()
             else:
                 # Restricted menu for non-logged-in users
-                choice = st.selectbox("Menu", ["Home", "Login", "Register", "Reset Password"])
+                choice = st.selectbox("Menu", ["Home", "Login", "Register", "Reset Password"], key="menu_selectbox_guest")
         
         # Load the selected page based on menu choice and authentication status
-        if choice == "Home":
-            show_home(user)
-        elif choice == "Login" and not user:
-            login_form()
-        elif choice == "Register" and not user:
-            registration_form()
-        elif choice == "Reset Password" and not user:
-            password_reset_form()
-        elif choice == "Profile" and user:
-            show_profile(user)
-        elif choice == "Settings" and user:
-            show_settings(user)
-        elif choice == "Chat" and user:
-            show_chat(user)
-
+        if not user:
+            if choice == "Home":
+                show_home(user)
+            elif choice == "Login":
+                login_form()
+            elif choice == "Register":
+                registration_form()
+            elif choice == "Reset Password":
+                password_reset_form()
+        else:
+            if choice == "Home":
+                show_home(user)
+            elif choice == "Profile":
+                show_profile(user)
+            elif choice == "Settings":
+                show_settings(user)
+            elif choice == "Chat":
+                chat()  # Changed from show_chat(user) to chat()
+                
 if __name__ == "__main__":
     main()

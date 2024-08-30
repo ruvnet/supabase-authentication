@@ -14,8 +14,7 @@ def handle_confirmation():
         st.warning("No confirmation token found in the URL.")
 
 def logout():
-    if st.sidebar.button("Logout"):
-        supabase.auth.sign_out()
-        st.session_state.user = None
-        st.success("Logged out successfully!")
-        st.rerun()
+    supabase.auth.sign_out()
+    st.session_state.clear()
+    st.session_state.logged_out = True
+    st.rerun()
