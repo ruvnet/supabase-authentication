@@ -5,3 +5,4 @@ pandas>=1.1
 fastapi
 python-multipart
 uvicorn
+llama-index

@@ -1,15 +1,25 @@
 import sys
 import os
+import streamlit as st
 
 # Add the src directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-import streamlit as st
+# Set page config at the very top of the main script
+st.set_page_config(
+    page_title="Supabase Authentication",
+    page_icon="🔐",
+    layout="centered",
+    initial_sidebar_state="auto",
+    menu_items=None
+)
+
 from auth.handlers import handle_confirmation, logout
 from auth.forms import login_form, registration_form, password_reset_form
 from pages.home import show_home
 from pages.profile import show_profile
 from pages.settings import show_settings
+from pages.chat import show_chat
 from utils.supabase_client import supabase, ensure_profile_exists
 
 # Hide the Streamlit style and About menu
@@ -54,7 +64,7 @@ def main():
             if user:
                 # Logged-in user menu
                 st.write(f"Welcome, {user.email}")
-                choice = st.selectbox("Menu", ["Home", "Profile", "Settings"])
+                choice = st.selectbox("Menu", ["Home", "Profile", "Settings", "Chat"])
                 
                 if st.button("Logout"):
                     logout()
@@ -75,6 +85,8 @@ def main():
             show_profile(user)
         elif choice == "Settings" and user:
             show_settings(user)
+        elif choice == "Chat" and user:
+            show_chat(user)
 
 if __name__ == "__main__":
     main()
